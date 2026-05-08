@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calculator, ArrowLeft, CheckCircle, X } from 'lucide-react';
+import { Plus, Trash2, Calculator, ArrowLeft, CheckCircle, X, Share2 } from 'lucide-react';
 import { runAudit, type ToolEntry, type AuditResult } from '../lib/auditEngine';
 
 const AI_TOOLS = [
@@ -16,9 +16,7 @@ const AI_TOOLS = [
 ];
 
 export default function AISpendAudit() {
-  const [tools, setTools] = useState<ToolEntry[]>([
-    { tool: "Cursor", plan: "Pro", monthlySpend: 20, seats: 1 }
-  ]);
+  const [tools, setTools] = useState<ToolEntry[]>([{ tool: "Cursor", plan: "Pro", monthlySpend: 20, seats: 1 }]);
   const [teamSize, setTeamSize] = useState(5);
   const [useCase, setUseCase] = useState("coding");
   const [showResults, setShowResults] = useState(false);
@@ -64,38 +62,43 @@ export default function AISpendAudit() {
   const runAuditHandler = () => {
     const results = runAudit(tools, teamSize, useCase);
     const total = results.reduce((sum, r) => sum + r.savings, 0);
-    
     setAuditResults(results);
     setTotalSavings(total);
     setShowResults(true);
   };
 
-  const resetForm = () => {
-    setShowResults(false);
-  };
+  const resetForm = () => setShowResults(false);
 
-  const handleCaptureReport = () => {
-    setShowLeadModal(true);
-  };
+  const handleCaptureReport = () => setShowLeadModal(true);
 
   const submitLead = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return alert("Please enter your email");
-    
-    alert(`✅ Report saved and sent to ${email}! Credex will reach out for high savings opportunities.`);
+    alert(`✅ Report saved! Sent to ${email}`);
     setShowLeadModal(false);
     setEmail("");
     setCompany("");
   };
 
-  // ==================== RESULTS VIEW ====================
+  const shareResult = () => {
+    const shareUrl = `${window.location.origin}?audit=shared`;
+    navigator.clipboard.writeText(shareUrl);
+    alert("✅ Shareable link copied!");
+  };
+
+  // Results View
   if (showResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-950 to-black text-white p-6">
         <div className="max-w-4xl mx-auto">
-          <button onClick={resetForm} className="flex items-center gap-2 text-zinc-400 hover:text-white mb-8">
-            <ArrowLeft className="w-5 h-5" /> Back to Form
-          </button>
+          <div className="flex justify-between items-center mb-8">
+            <button onClick={resetForm} className="flex items-center gap-2 text-zinc-400 hover:text-white">
+              <ArrowLeft className="w-5 h-5" /> Back to Form
+            </button>
+            <button onClick={shareResult} className="flex items-center gap-2 text-blue-400 hover:text-blue-500">
+              <Share2 className="w-5 h-5" /> Share Results
+            </button>
+          </div>
 
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold mb-4">Your AI Spend Audit</h1>
@@ -130,47 +133,33 @@ export default function AISpendAudit() {
           </div>
         </div>
 
-        {/* Lead Capture Modal */}
+        {/* Lead Modal */}
         {showLeadModal && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-zinc-900 rounded-3xl p-8 max-w-md w-full relative">
-              <button 
-                onClick={() => setShowLeadModal(false)} 
-                className="absolute top-4 right-4 text-zinc-400 hover:text-white"
-              >
+              <button onClick={() => setShowLeadModal(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white">
                 <X className="w-6 h-6" />
               </button>
-              
               <h2 className="text-3xl font-bold mb-2">Save Your Report</h2>
-              <p className="text-zinc-400 mb-6">We'll email you the full audit + next steps.</p>
-
+              <p className="text-zinc-400 mb-6">We'll email you the full audit.</p>
               <form onSubmit={submitLead} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-1">Work Email *</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3"
-                    placeholder="you@company.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-zinc-400 mb-1">Company Name (optional)</label>
-                  <input
-                    type="text"
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3"
-                    placeholder="Acme Corp"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-white text-black font-semibold py-4 rounded-2xl text-lg hover:bg-zinc-200"
-                >
-                  Send Me The Report →
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3"
+                  placeholder="you@company.com"
+                />
+                <input
+                  type="text"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3"
+                  placeholder="Company (optional)"
+                />
+                <button type="submit" className="w-full bg-white text-black font-semibold py-4 rounded-2xl">
+                  Send Report →
                 </button>
               </form>
             </div>
@@ -180,7 +169,7 @@ export default function AISpendAudit() {
     );
   }
 
-  // ==================== FORM VIEW ====================
+  // Form View
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 to-black text-white">
       <div className="max-w-4xl mx-auto px-6 py-12">
@@ -199,14 +188,8 @@ export default function AISpendAudit() {
           {tools.map((tool, index) => (
             <div key={index} className="mb-6 p-6 bg-zinc-950 border border-zinc-800 rounded-2xl">
               <div className="flex justify-between items-center mb-4">
-                <select
-                  value={tool.tool}
-                  onChange={(e) => updateTool(index, 'tool', e.target.value)}
-                  className="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-lg"
-                >
-                  {AI_TOOLS.map(t => (
-                    <option key={t.name} value={t.name}>{t.name}</option>
-                  ))}
+                <select value={tool.tool} onChange={(e) => updateTool(index, 'tool', e.target.value)} className="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-lg">
+                  {AI_TOOLS.map(t => <option key={t.name} value={t.name}>{t.name}</option>)}
                 </select>
                 <button onClick={() => removeTool(index)} className="text-red-500 hover:text-red-600">
                   <Trash2 className="w-5 h-5" />
@@ -216,62 +199,34 @@ export default function AISpendAudit() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm text-zinc-400 mb-2">Plan</label>
-                  <select
-                    value={tool.plan}
-                    onChange={(e) => updateTool(index, 'plan', e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3"
-                  >
-                    {AI_TOOLS.find(t => t.name === tool.tool)?.plans.map(p => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
+                  <select value={tool.plan} onChange={(e) => updateTool(index, 'plan', e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3">
+                    {AI_TOOLS.find(t => t.name === tool.tool)?.plans.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm text-zinc-400 mb-2">Monthly Spend ($)</label>
-                  <input
-                    type="number"
-                    value={tool.monthlySpend}
-                    onChange={(e) => updateTool(index, 'monthlySpend', parseInt(e.target.value) || 0)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3"
-                  />
+                  <input type="number" value={tool.monthlySpend} onChange={(e) => updateTool(index, 'monthlySpend', parseInt(e.target.value) || 0)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3" />
                 </div>
                 <div>
                   <label className="block text-sm text-zinc-400 mb-2">Seats</label>
-                  <input
-                    type="number"
-                    value={tool.seats}
-                    onChange={(e) => updateTool(index, 'seats', parseInt(e.target.value) || 1)}
-                    className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3"
-                  />
+                  <input type="number" value={tool.seats} onChange={(e) => updateTool(index, 'seats', parseInt(e.target.value) || 1)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3" />
                 </div>
               </div>
             </div>
           ))}
 
-          <button
-            onClick={addTool}
-            className="flex items-center gap-2 text-blue-400 hover:text-blue-500 font-medium"
-          >
+          <button onClick={addTool} className="flex items-center gap-2 text-blue-400 hover:text-blue-500 font-medium">
             <Plus className="w-5 h-5" /> Add another tool
           </button>
 
           <div className="mt-8 grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm text-zinc-400 mb-2">Team Size</label>
-              <input
-                type="number"
-                value={teamSize}
-                onChange={(e) => setTeamSize(parseInt(e.target.value) || 1)}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3"
-              />
+              <input type="number" value={teamSize} onChange={(e) => setTeamSize(parseInt(e.target.value) || 1)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3" />
             </div>
             <div>
               <label className="block text-sm text-zinc-400 mb-2">Primary Use Case</label>
-              <select
-                value={useCase}
-                onChange={(e) => setUseCase(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3"
-              >
+              <select value={useCase} onChange={(e) => setUseCase(e.target.value)} className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3">
                 <option value="coding">Coding</option>
                 <option value="writing">Writing/Content</option>
                 <option value="data">Data / Analysis</option>
@@ -282,10 +237,7 @@ export default function AISpendAudit() {
           </div>
         </div>
 
-        <button 
-          onClick={runAuditHandler}
-          className="w-full bg-white text-black font-semibold py-4 rounded-2xl text-xl hover:bg-zinc-200 transition-all"
-        >
+        <button onClick={runAuditHandler} className="w-full bg-white text-black font-semibold py-4 rounded-2xl text-xl hover:bg-zinc-200 transition-all">
           Run AI Spend Audit →
         </button>
       </div>
