@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Calculator, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, Calculator, ArrowLeft, CheckCircle, X } from 'lucide-react';
+import { runAudit, type ToolEntry, type AuditResult } from '../lib/auditEngine';
 
 const AI_TOOLS = [
   { name: "Cursor", plans: ["Hobby", "Pro", "Business", "Enterprise"] },
@@ -14,13 +15,6 @@ const AI_TOOLS = [
   { name: "v0 / Windsurf", plans: ["Pro", "Team"] },
 ];
 
-interface ToolEntry {
-  tool: string;
-  plan: string;
-  monthlySpend: number;
-  seats: number;
-}
-
 export default function AISpendAudit() {
   const [tools, setTools] = useState<ToolEntry[]>([
     { tool: "Cursor", plan: "Pro", monthlySpend: 20, seats: 1 }
@@ -28,7 +22,11 @@ export default function AISpendAudit() {
   const [teamSize, setTeamSize] = useState(5);
   const [useCase, setUseCase] = useState("coding");
   const [showResults, setShowResults] = useState(false);
+  const [auditResults, setAuditResults] = useState<AuditResult[]>([]);
   const [totalSavings, setTotalSavings] = useState(0);
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
 
   // Load from localStorage
   useEffect(() => {
@@ -63,9 +61,12 @@ export default function AISpendAudit() {
 
   const totalSpend = tools.reduce((sum, t) => sum + (t.monthlySpend || 0), 0);
 
-  const runAudit = () => {
-    const mockSavings = Math.floor(totalSpend * 0.35);
-    setTotalSavings(mockSavings);
+  const runAuditHandler = () => {
+    const results = runAudit(tools, teamSize, useCase);
+    const total = results.reduce((sum, r) => sum + r.savings, 0);
+    
+    setAuditResults(results);
+    setTotalSavings(total);
     setShowResults(true);
   };
 
@@ -73,36 +74,113 @@ export default function AISpendAudit() {
     setShowResults(false);
   };
 
+  const handleCaptureReport = () => {
+    setShowLeadModal(true);
+  };
+
+  const submitLead = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return alert("Please enter your email");
+    
+    alert(`✅ Report saved and sent to ${email}! Credex will reach out for high savings opportunities.`);
+    setShowLeadModal(false);
+    setEmail("");
+    setCompany("");
+  };
+
+  // ==================== RESULTS VIEW ====================
   if (showResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-zinc-950 to-black text-white p-6">
         <div className="max-w-4xl mx-auto">
-          <button
-            onClick={resetForm}
-            className="flex items-center gap-2 text-zinc-400 hover:text-white mb-8"
-          >
+          <button onClick={resetForm} className="flex items-center gap-2 text-zinc-400 hover:text-white mb-8">
             <ArrowLeft className="w-5 h-5" /> Back to Form
           </button>
 
           <div className="text-center mb-12">
             <h1 className="text-5xl font-bold mb-4">Your AI Spend Audit</h1>
-            <p className="text-3xl font-semibold text-green-400">
-              Potential Monthly Savings: ${totalSavings}
-            </p>
+            <p className="text-4xl font-bold text-green-400">Potential Monthly Savings: ${totalSavings}</p>
             <p className="text-2xl text-green-500">(${totalSavings * 12} per year)</p>
           </div>
 
-          <div className="bg-zinc-900 rounded-3xl p-8 text-center">
-            <p className="text-xl mb-8">Full breakdown + smart recommendations coming tomorrow (Day 2)</p>
-            <button className="mt-4 bg-white text-black px-10 py-4 rounded-2xl font-semibold text-lg">
-              Capture Full Report →
+          <div className="space-y-6 mb-12">
+            {auditResults.map((result, index) => (
+              <div key={index} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-xl font-semibold">{result.tool}</h3>
+                    <p className="text-green-400 font-medium">Save ${result.savings}/mo</p>
+                  </div>
+                  <CheckCircle className="w-6 h-6 text-green-500" />
+                </div>
+                <p className="mt-3 text-zinc-300">{result.recommendedAction}</p>
+                <p className="text-sm text-zinc-500 mt-2">{result.reason}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-700 rounded-3xl p-8 text-center">
+            <p className="text-lg mb-6">Ready to capture these savings?</p>
+            <button 
+              onClick={handleCaptureReport}
+              className="bg-white text-black px-10 py-4 rounded-2xl font-semibold text-lg hover:bg-zinc-100"
+            >
+              Capture Full Report & Book Call →
             </button>
           </div>
         </div>
+
+        {/* Lead Capture Modal */}
+        {showLeadModal && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-zinc-900 rounded-3xl p-8 max-w-md w-full relative">
+              <button 
+                onClick={() => setShowLeadModal(false)} 
+                className="absolute top-4 right-4 text-zinc-400 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              
+              <h2 className="text-3xl font-bold mb-2">Save Your Report</h2>
+              <p className="text-zinc-400 mb-6">We'll email you the full audit + next steps.</p>
+
+              <form onSubmit={submitLead} className="space-y-4">
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-1">Work Email *</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3"
+                    placeholder="you@company.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-zinc-400 mb-1">Company Name (optional)</label>
+                  <input
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    className="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3"
+                    placeholder="Acme Corp"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full bg-white text-black font-semibold py-4 rounded-2xl text-lg hover:bg-zinc-200"
+                >
+                  Send Me The Report →
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
+  // ==================== FORM VIEW ====================
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 to-black text-white">
       <div className="max-w-4xl mx-auto px-6 py-12">
@@ -130,11 +208,7 @@ export default function AISpendAudit() {
                     <option key={t.name} value={t.name}>{t.name}</option>
                   ))}
                 </select>
-                
-                <button
-                  onClick={() => removeTool(index)}
-                  className="text-red-500 hover:text-red-600"
-                >
+                <button onClick={() => removeTool(index)} className="text-red-500 hover:text-red-600">
                   <Trash2 className="w-5 h-5" />
                 </button>
               </div>
@@ -152,7 +226,6 @@ export default function AISpendAudit() {
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-sm text-zinc-400 mb-2">Monthly Spend ($)</label>
                   <input
@@ -162,7 +235,6 @@ export default function AISpendAudit() {
                     className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm text-zinc-400 mb-2">Seats</label>
                   <input
@@ -211,7 +283,7 @@ export default function AISpendAudit() {
         </div>
 
         <button 
-          onClick={runAudit}
+          onClick={runAuditHandler}
           className="w-full bg-white text-black font-semibold py-4 rounded-2xl text-xl hover:bg-zinc-200 transition-all"
         >
           Run AI Spend Audit →
